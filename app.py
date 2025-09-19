@@ -4,6 +4,8 @@ import numpy as np
 from datetime import datetime
 import re
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # -------------------------
 # Configuración página
@@ -12,75 +14,115 @@ st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", la
 st.title("🚗 Validador de Dobles Cobros")
 st.markdown("---")
 
-# ===== CSS Sidebar =====
-import streamlit as st
-
-# Configuración de la página
-st.set_page_config(
-    page_title="Validador de Dobles Cobros",
-    page_icon="🚗",
-    layout="wide"
-)
-
-# CSS personalizado para el tema oscuro con sidebar elegante
+# ===== CSS Personalizado =====
 st.markdown("""
-    <style>
-    /* Fondo general */
-    .stApp {
-        background-color: #121212;
-        color: #f5f5f5;
-        font-family: 'Segoe UI', sans-serif;
-    }
+<style>
+/* Fondo principal */
+.main {
+    background-color: #0E1117;
+}
 
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background: #1e1e1e !important;
-        border-right: 1px solid #2d2d2d;
-        padding: 15px;
-    }
+/* Sidebar con colores que combinan con el logo GoPass */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1a1f35 0%, #2d1f35 100%) !important;
+    color: white !important;
+    width: 300px !important;
+    padding: 20px 10px !important;
+    border-right: 1px solid #444 !important;
+}
 
-    section[data-testid="stSidebar"] h1, 
-    section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3, 
-    section[data-testid="stSidebar"] label {
-        color: #e0e0e0 !important;
-    }
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] .stMarkdown p,
+[data-testid="stSidebar"] .stCheckbox label {
+    color: white !important; 
+}
 
-    /* Cajas de carga */
-    div[data-testid="stFileUploader"] {
-        background: #2a2a2a !important;
-        border: 1px solid #3d3d3d !important;
-        border-radius: 12px !important;
-        padding: 18px !important;
-    }
+[data-testid="stSidebar"] .stFileUploader > label {
+    color: white !important;
+    font-weight: bold;
+}
 
-    div[data-testid="stFileUploader"] p {
-        color: #cccccc !important;
-    }
+[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span:first-child {
+    font-size: 0 !important;
+}
 
-    /* Botones */
-    button {
-        background: linear-gradient(135deg, #0078d7, #00bfa5) !important;
-        color: white !important;
-        border-radius: 10px !important;
-        border: none !important;
-        font-weight: 600 !important;
-        padding: 8px 16px !important;
-    }
+[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span:first-child::after {
+    content: "Buscar archivo" !important;
+    font-size: 14px !important;
+    color: white !important;
+    background-color: #4a2c7e;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-weight: bold !important;
+}
 
-    button:hover {
-        background: linear-gradient(135deg, #00bfa5, #0078d7) !important;
-    }
-    </style>
+/* Botones */
+.stButton > button {
+    background-color: #4a2c7e !important;
+    color: white !important;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.stButton > button:hover {
+    background-color: #6b3dad !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Títulos y texto */
+h1, h2, h3 {
+    color: #4a2c7e !important;
+}
+
+/* Dataframes */
+.dataframe {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Tarjetas de métricas */
+.css-1r6slb0 {
+    background-color: #f0f2f6;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #4a2c7e;
+}
+
+/* Progress bar */
+.stProgress > div > div {
+    background-color: #4a2c7e;
+}
+
+/* Alertas */
+.stAlert {
+    border-radius: 8px;
+}
+
+/* Logo container */
+.logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+</style>
 """, unsafe_allow_html=True)
 
-
-
-# Logo de GoPass
+# Logo de GoPass con contenedor estilizado
 st.markdown("""
-<div style="display: flex; justify-content: center; margin-bottom: 30px;">
+<div class="logo-container">
     <img src="https://i.imgur.com/z9xt46F.jpeg"
-         style="width: 50%; border-radius: 10px; display: block; margin: 0 auto;" 
+         style="width: 60%; border-radius: 10px; display: block; margin: 0 auto;" 
          alt="Logo Gopass">
 </div>
 """, unsafe_allow_html=True)
@@ -222,54 +264,77 @@ if comercio_file and gopass_file:
 
         st.success("✅ Archivos cargados correctamente")
 
-        if st.button("🚀 Iniciar Validación de Dobles Cobros"):
-            comercio_filtered, comercio_keys = process_comercio_base(comercio_df)
-            gopass_processed = process_gopass_base(gopass_df)
+        if st.button("🚀 Iniciar Validación de Dobles Cobros", type="primary"):
+            with st.spinner("Procesando datos..."):
+                comercio_filtered, comercio_keys = process_comercio_base(comercio_df)
+                gopass_processed = process_gopass_base(gopass_df)
 
-            possible_doubles = find_possible_doubles(comercio_keys, gopass_processed)
-            if possible_doubles.empty:
-                st.success("✅ No se encontraron posibles dobles cobros.")
-            else:
-                st.subheader("⚠️ Posibles Dobles Cobros")
-                st.dataframe(possible_doubles, use_container_width=True)
-
-                confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
-                if confirmed.empty:
-                    st.info("No se encontraron dobles cobros confirmados.")
+                possible_doubles = find_possible_doubles(comercio_keys, gopass_processed)
+                
+                # Mostrar métricas iniciales
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Registros Comercio", len(comercio_df))
+                with col2:
+                    st.metric("Registros GoPass", len(gopass_df))
+                with col3:
+                    st.metric("Posibles Dobles Cobros", len(possible_doubles))
+                
+                if possible_doubles.empty:
+                    st.success("✅ No se encontraron posibles dobles cobros.")
                 else:
-                    st.subheader("🚨 Dobles Cobros Confirmados")
-                    st.dataframe(confirmed, use_container_width=True)
+                    st.subheader("⚠️ Posibles Dobles Cobros")
+                    st.dataframe(possible_doubles, use_container_width=True)
 
-                    # -------------------------
-                    # MINI DASHBOARD
-                    # -------------------------
-                    st.markdown("---")
-                    st.header("📊 Dashboard de Resultados")
+                    confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
+                    
+                    col4, col5 = st.columns(2)
+                    with col4:
+                        st.metric("Dobles Cobros Confirmados", len(confirmed))
+                    with col5:
+                        st.metric("Falsos Positivos", len(possible_doubles) - len(confirmed))
+                    
+                    if confirmed.empty:
+                        st.info("No se encontraron dobles cobros confirmados.")
+                    else:
+                        st.subheader("🚨 Dobles Cobros Confirmados")
+                        st.dataframe(confirmed, use_container_width=True)
 
-                    col1, col2 = st.columns(2)
+                        # -------------------------
+                        # MINI DASHBOARD
+                        # -------------------------
+                        st.markdown("---")
+                        st.header("📊 Dashboard de Resultados")
 
-                    # Gráfico 1: Totales de registros en bases originales
-                    with col1:
-                        base_counts = pd.DataFrame({
-                            "Base": ["Comercio", "GoPass"],
-                            "Registros": [len(comercio_df), len(gopass_df)]
-                        })
-                        fig1 = px.bar(base_counts, x="Base", y="Registros", text="Registros",
-                                      color="Base", title="Cantidad de registros por base")
-                        fig1.update_traces(textposition="outside")
-                        st.plotly_chart(fig1, use_container_width=True)
+                        col1, col2 = st.columns(2)
 
-                    # Gráfico 2: Proporción de dobles cobros confirmados
-                    with col2:
-                        total_confirmados = len(confirmed)
-                        total_no_confirmados = len(possible_doubles) - total_confirmados
-                        pie_data = pd.DataFrame({
-                            "Categoria": ["Confirmados", "No Confirmados"],
-                            "Cantidad": [total_confirmados, total_no_confirmados]
-                        })
-                        fig2 = px.pie(pie_data, names="Categoria", values="Cantidad", hole=0.5,
-                                      title="Proporción de dobles cobros confirmados")
-                        st.plotly_chart(fig2, use_container_width=True)
+                        # Gráfico 1: Totales de registros en bases originales
+                        with col1:
+                            base_counts = pd.DataFrame({
+                                "Base": ["Comercio", "GoPass"],
+                                "Registros": [len(comercio_df), len(gopass_df)]
+                            })
+                            fig1 = px.bar(base_counts, x="Base", y="Registros", text="Registros",
+                                        color="Base", 
+                                        color_discrete_sequence=["#4a2c7e", "#6b3dad"],
+                                        title="Cantidad de registros por base")
+                            fig1.update_traces(textposition="outside")
+                            fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)')
+                            st.plotly_chart(fig1, use_container_width=True)
+
+                        # Gráfico 2: Proporción de dobles cobros confirmados
+                        with col2:
+                            total_confirmados = len(confirmed)
+                            total_no_confirmados = len(possible_doubles) - total_confirmados
+                            pie_data = pd.DataFrame({
+                                "Categoria": ["Confirmados", "No Confirmados"],
+                                "Cantidad": [total_confirmados, total_no_confirmados]
+                            })
+                            fig2 = px.pie(pie_data, names="Categoria", values="Cantidad", hole=0.5,
+                                        color_discrete_sequence=["#4a2c7e", "#9d71c6"],
+                                        title="Proporción de dobles cobros confirmados")
+                            fig2.update_traces(textinfo='percent+label')
+                            st.plotly_chart(fig2, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error procesando archivos: {str(e)}")
