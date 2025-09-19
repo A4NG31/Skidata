@@ -298,34 +298,12 @@ def show_data_preview(comercio_df, gopass_df):
     with tab1:
         st.subheader("Base de Datos del Comercio")
         st.dataframe(comercio_df.head(10), use_container_width=True)
-        
-        # Información de columnas
-        st.subheader("Información de Columnas - Comercio")
-        col_info = pd.DataFrame({
-            'Columna': comercio_df.columns,
-            'Tipo': comercio_df.dtypes.values,
-            'No Nulos': comercio_df.notnull().sum().values,
-            '% Nulos': (comercio_df.isnull().sum().values / len(comercio_df) * 100).round(2)
-        })
-        st.dataframe(col_info, use_container_width=True)
     
     with tab2:
         st.subheader("Base de Datos de GoPass")
         st.dataframe(gopass_df.head(10), use_container_width=True)
         
-        # Información de columnas
-        st.subheader("Información de Columnas - GoPass")
-        col_info = pd.DataFrame({
-            'Columna': gopass_df.columns,
-            'Tipo': gopass_df.dtypes.values,
-            'No Nulos': gopass_df.notnull().sum().values,
-            '% Nulos': (gopass_df.isnull().sum().values / len(gopass_df) * 100).round(2)
-        })
-        st.dataframe(col_info, use_container_width=True)
-    
-    # Gráficos de distribución temporal
-    st.markdown("---")
-    st.subheader("Distribución Temporal de los Datos")
+      
     
     # Intentar identificar columnas de fecha
     comercio_date_cols = [col for col in comercio_df.columns if any(word in col.lower() for word in ['fecha', 'hora', 'date', 'time'])]
