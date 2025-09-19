@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -11,169 +11,102 @@ st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", la
 st.title("🚗 Validador de Dobles Cobros")
 st.markdown("---")
 
-# ===== CSS Sidebar =====
+# ===== CSS GLOBAL =====
 st.markdown("""
 <style>
+/* ===== Fondo General ===== */
+.stApp {
+    background: linear-gradient(135deg, #0F2027, #203A43, #2C5364);
+    color: white !important;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* ===== Títulos ===== */
+h1, h2, h3, h4 {
+    color: #00F5D4 !important;
+    font-weight: bold !important;
+    text-shadow: 0px 0px 8px rgba(0, 245, 212, 0.5);
+}
+
+/* ===== Separadores ===== */
+hr {
+    border: 1px solid #00CFFF !important;
+}
+
 /* ===== Sidebar ===== */
 [data-testid="stSidebar"] {
-    background-color: #1E1E2F !important;  /* fondo oscuro elegante */
-    color: white !important;
-    width: 300px !important;  /* ancho fijo */
+    background-color: #1E1E2F !important;
     padding: 20px 10px 20px 10px !important;
     border-right: 1px solid #333 !important;
 }
 
-/* Texto general en blanco */
+/* Texto en sidebar */
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3,
 [data-testid="stSidebar"] p,
-[data-testid="stSidebar"] .stMarkdown p,
-[data-testid="stSidebar"] .stCheckbox label {
-    color: white !important; 
+[data-testid="stSidebar"] label {
+    color: #E0E0E0 !important; 
 }
 
-/* SOLO el label del file_uploader en blanco */
-[data-testid="stSidebar"] .stFileUploader > label {
-    color: white !important;
-    font-weight: bold;
-}
-
-/* Mantener en negro el resto del uploader */
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-title,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-subtitle,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-list button,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-Item-name,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-Item-status,
-[data-testid="stSidebar"] .stFileUploader span,
-[data-testid="stSidebar"] .stFileUploader div {
-    color: black !important;
-}
-
-/* ===== Botón de expandir/cerrar sidebar ===== */
+/* Botón expandir sidebar */
 [data-testid="stSidebarNav"] button {
     background: #2E2E3E !important;
     color: white !important;
     border-radius: 6px !important;
 }
 
-/* ===== Encabezados del sidebar ===== */
-[data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, 
-[data-testid="stSidebar"] h3 {
-    color: #00CFFF !important;
+/* ===== DataFrames estilo glass ===== */
+[data-testid="stDataFrame"] {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 12px !important;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.4);
 }
 
-/* ===== Inputs de texto en el sidebar ===== */
-[data-testid="stSidebar"] input[type="text"],
-[data-testid="stSidebar"] input[type="password"] {
+/* ===== Botones ===== */
+.stButton button {
+    background: linear-gradient(90deg, #00CFFF, #00F5D4);
     color: black !important;
-    background-color: white !important;
-    border-radius: 6px !important;
-    padding: 5px !important;
+    font-weight: bold;
+    border-radius: 12px;
+    padding: 10px 20px;
+    border: none;
+    transition: 0.3s ease-in-out;
+}
+.stButton button:hover {
+    background: linear-gradient(90deg, #00F5D4, #00CFFF);
+    transform: scale(1.05);
+    box-shadow: 0px 0px 10px rgba(0,245,212,0.6);
 }
 
-/* ===== Icono de ojo en campo de contraseña ===== */
-[data-testid="stSidebar"] button[data-testid="InputMenuButton"] {
-    background-color: white !important;
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+    width: 8px;
 }
-[data-testid="stSidebar"] button[data-testid="InputMenuButton"] svg {
-    fill: black !important;
-    color: black !important;
+::-webkit-scrollbar-track {
+    background: #1E1E2F;
 }
-
-/* ===== BOTÓN "BROWSE FILES" ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button {
-    color: black !important;
-    background-color: #f0f0f0 !important;
-    border: 1px solid #ccc !important;
+::-webkit-scrollbar-thumb {
+    background: #00CFFF;
+    border-radius: 10px;
 }
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button:hover {
-    background-color: #e0e0e0 !important;
-}
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button:focus {
-    outline: 2px solid #4d90fe !important;
-}
-/* Texto dentro del botón Browse files */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span {
-    color: black !important;
-    font-weight: bold !important;
-}
-/* Texto alternativo para el botón Browse files */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button::after {
-    content: "Buscar archivo" !important;
-    color: black !important;
-}
-/* Ocultar el texto original si es necesario */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span:first-child {
-    font-size: 0 !important;
-}
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span:first-child::after {
-    content: "Buscar archivo" !important;
-    font-size: 14px !important;
-    color: black !important;
-    font-weight: bold !important;
-}
-
-/* ===== Iconos dentro del file uploader ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-icon svg {
-    fill: black !important;
-}
-
-/* ===== Borde del área de carga ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles {
-    border: 2px dashed #ccc !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* ===== Texto de marcadores en sidebar ===== */
-[data-testid="stSidebar"] .stMarkdown p {
-    color: white !important;
-}
-
-/* ===== Checkboxes ===== */
-[data-testid="stSidebar"] .stCheckbox label {
-    color: white !important;
-}
-
-/* ===== Texto en multiselect ===== */
-[data-testid="stSidebar"] .stMultiSelect label,
-[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"] {
-    color: white !important;
-}
-[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="tag"] {
-    color: black !important;
-    background-color: #e0e0e0 !important;
-}
-
-/* ===== Botón de eliminar archivo ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-Item-action--remove svg {
-    fill: black !important;
-}
-
-/* ===== ICONOS DE AYUDA (?) EN EL SIDEBAR ===== */
-[data-testid="stSidebar"] svg.icon {
-    stroke: white !important;   /* fuerza el trazo */
-    color: white !important;    /* asegura currentColor */
-    fill: none !important;      /* mantiene el estilo original */
-    opacity: 1 !important;
+::-webkit-scrollbar-thumb:hover {
+    background: #00F5D4;
 }
 </style>
 """, unsafe_allow_html=True)
 
-
-# Logo de GoPass con HTML
+# Logo de GoPass
 st.markdown("""
 <div style="display: flex; justify-content: center; margin-bottom: 30px;">
     <img src="https://i.imgur.com/z9xt46F.jpeg"
-         style="width: 50%; border-radius: 10px; display: block; margin: 0 auto;" 
+         style="width: 40%; border-radius: 15px; box-shadow: 0px 0px 12px rgba(0,245,212,0.5);" 
          alt="Logo Gopass">
 </div>
 """, unsafe_allow_html=True)
 
-
 # -------------------------
-# Helpers
+# Helpers (no modifiqué lógica)
 # -------------------------
 def clean_colnames(df):
     df.columns = [str(c).strip() for c in df.columns]
@@ -199,7 +132,7 @@ def plate_is_valid(plate):
     return bool(re.match(r'^[A-Z]{3}\d{3}$', p))
 
 # -------------------------
-# Procesamiento Base Comercio
+# Procesamiento (igual)
 # -------------------------
 def process_comercio_base(df):
     df = clean_colnames(df)
@@ -231,9 +164,6 @@ def process_comercio_base(df):
     comercio_keys['llave_validacion'] = make_validation_key(comercio_keys['Fecha_entrada'], comercio_keys['Fecha_salida'])
     return df_filtered, comercio_keys[['Nº de tarjeta','Fecha_entrada','Fecha_salida','llave_validacion']]
 
-# -------------------------
-# Procesamiento Base Gopass
-# -------------------------
 def process_gopass_base(df):
     df = clean_colnames(df)
     required_cols = ['Fecha de entrada', 'Fecha de salida', 'Transacción', 'Placa Vehiculo']
@@ -250,9 +180,6 @@ def process_gopass_base(df):
     df_valid = df.dropna(subset=['Fecha_entrada_norm_full','Fecha_salida_norm_full']).copy()
     return df_valid
 
-# -------------------------
-# Buscar posibles dobles cobros (con tolerancia)
-# -------------------------
 def find_possible_doubles(comercio_keys, gopass_df):
     st.write("🔍 Buscando posibles dobles cobros (±5 min)...")
 
@@ -269,9 +196,6 @@ def find_possible_doubles(comercio_keys, gopass_df):
     possibles = merged[(merged['dif_entrada'].between(-5,5)) & (merged['dif_salida'].between(-5,5))].copy()
     return possibles
 
-# -------------------------
-# Confirmar dobles cobros
-# -------------------------
 def find_confirmed_doubles(possible_df, comercio_df_original):
     if possible_df is None or possible_df.empty:
         return pd.DataFrame()
@@ -287,7 +211,6 @@ def find_confirmed_doubles(possible_df, comercio_df_original):
     merged['llave_confirmacion_gopass']   = merged['llave_validacion'] + "|" + merged['Placa_clean']
 
     confirmed = merged[merged['llave_confirmacion_comercio'] == merged['llave_confirmacion_gopass']].copy()
-
     return confirmed[['Nº de tarjeta','Transacción','Matrícula_clean','Placa_clean','llave_validacion','llave_confirmacion_comercio','llave_confirmacion_gopass']]
 
 # -------------------------
@@ -324,12 +247,12 @@ if comercio_file and gopass_file:
 
                 confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
                 if confirmed.empty:
-                    st.info("No se encontraron dobles cobros confirmados.")
+                    st.info("ℹ️ No se encontraron dobles cobros confirmados.")
                 else:
                     st.subheader("🚨 Dobles Cobros Confirmados")
                     st.dataframe(confirmed, use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error procesando archivos: {str(e)}")
+        st.error(f"❌ Error procesando archivos: {str(e)}")
 else:
     st.info("👆 Carga ambos archivos en la barra lateral para comenzar.")
