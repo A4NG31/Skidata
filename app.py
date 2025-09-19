@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 # Configuración página
 # -------------------------
 st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", layout="wide")
-st.title("🚗 Validador de Dobles Cobros")
+st.title("Validador de Dobles Cobros - SKIDATA")
 st.markdown("---")
 
 # ===== CSS Personalizado =====
