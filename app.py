@@ -50,13 +50,8 @@ def process_comercio_base(df):
     df['Fecha/Hora_normalizada'] = normalize_datetime_vectorized(df['Fecha/Hora'])
     df['Movimiento_norm'] = df['Movimiento'].astype(str).str.strip().str.lower()
     df['Movimiento_norm'] = df['Movimiento_norm'].replace({
-        'entrada': 'entrada', 'salida': 'salida', 'transacción': 'transaccion'
+        'entrada': 'Entrada', 'salida': 'Salida', 'transacción': 'Transacción', 'transaccion': 'Transacción'
     })
-    df['Movimiento_norm'] = df['Movimiento_norm'].map({
-        'entrada': 'Entrada',
-        'salida': 'Salida',
-        'transaccion': 'Transacción'
-    }).fillna(df['Movimiento'].astype(str).str.strip())
 
     df['Tarjeta_norm'] = df['Tarjeta'].astype(str).str.strip()
     df_filtered = df[df['Tarjeta_norm'].isin(['TiqueteVehiculo', 'Una salida 01'])].copy()
@@ -95,57 +90,56 @@ def process_gopass_base(df):
     return df_valid
 
 # -------------------------
-# Buscar posibles dobles cobros (solo llaves)
+# Buscar posibles dobles cobros (con tolerancia)
 # -------------------------
 def find_possible_doubles(comercio_keys, gopass_df):
     st.write("🔍 Buscando posibles dobles cobros (±5 min)...")
-    # Solo cruzamos por llave
-    common_keys = set(comercio_keys['llave_validacion']).intersection(set(gopass_df['llave_validacion']))
-    if not common_keys:
+
+    merged = comercio_keys.merge(
+        gopass_df[['Transacción','Fecha_entrada_norm_full','Fecha_salida_norm_full','llave_validacion','Placa_clean']],
+        on='llave_validacion', how='inner', suffixes=('_comercio','_gopass')
+    )
+    if merged.empty:
         return pd.DataFrame()
 
-    possibles = pd.DataFrame(sorted(common_keys), columns=['llave_validacion'])
+    merged['dif_entrada'] = (merged['Fecha_entrada'] - merged['Fecha_entrada_norm_full']).dt.total_seconds()/60
+    merged['dif_salida']  = (merged['Fecha_salida'] - merged['Fecha_salida_norm_full']).dt.total_seconds()/60
+
+    possibles = merged[(merged['dif_entrada'].between(-5,5)) & (merged['dif_salida'].between(-5,5))].copy()
     return possibles
 
 # -------------------------
-# Confirmar dobles cobros (validando placas)
+# Confirmar dobles cobros
 # -------------------------
-def find_confirmed_doubles(possible_df, comercio_df_original, gopass_df):
+def find_confirmed_doubles(possible_df, comercio_df_original):
     if possible_df is None or possible_df.empty:
         return pd.DataFrame()
 
     comercio_df_original['Matrícula_clean'] = comercio_df_original['Matrícula'].astype(str).str.strip().str.upper()
     comercio_valid_plates = comercio_df_original[comercio_df_original['Matrícula_clean'].apply(plate_is_valid)][['Nº de tarjeta','Matrícula_clean']].drop_duplicates()
 
-    # Tomar solo las llaves en común
-    merged_comercio = comercio_valid_plates.merge(possible_df, on=None, how="cross")
-    merged_comercio = merged_comercio[merged_comercio['llave_validacion'].isin(possible_df['llave_validacion'])]
-
-    gopass_plates = gopass_df[['Transacción','Placa_clean','llave_validacion']].copy()
-
-    # Coincidencia exacta por placa y llave
-    confirmed = merged_comercio.merge(gopass_plates, on='llave_validacion', how='inner')
-    confirmed = confirmed[confirmed['Matrícula_clean'] == confirmed['Placa_clean']]
-
-    if confirmed.empty:
+    merged = possible_df.merge(comercio_valid_plates, on='Nº de tarjeta', how='inner')
+    if merged.empty:
         return pd.DataFrame()
 
-    confirmed['llave_confirmacion_comercio'] = confirmed['llave_validacion'] + "|" + confirmed['Matrícula_clean']
-    confirmed['llave_confirmacion_gopass']   = confirmed['llave_validacion'] + "|" + confirmed['Placa_clean']
+    merged['llave_confirmacion_comercio'] = merged['llave_validacion'] + "|" + merged['Matrícula_clean']
+    merged['llave_confirmacion_gopass']   = merged['llave_validacion'] + "|" + merged['Placa_clean']
 
-    return confirmed[['Nº de tarjeta','Matrícula_clean','Placa_clean','llave_validacion','llave_confirmacion_comercio','llave_confirmacion_gopass']]
+    confirmed = merged[merged['llave_confirmacion_comercio'] == merged['llave_confirmacion_gopass']].copy()
+
+    return confirmed[['Nº de tarjeta','Transacción','Matrícula_clean','Placa_clean','llave_validacion','llave_confirmacion_comercio','llave_confirmacion_gopass']]
 
 # -------------------------
 # Interfaz
 # -------------------------
 st.sidebar.header("📁 Cargar Archivos")
 
-comercio_file = st.sidebar.file_uploader("Cargar archivo del comercio (CSV o Excel)", type=['csv','xlsx','xls'], key="comercio")
-gopass_file   = st.sidebar.file_uploader("Cargar archivo de Gopass (Excel)", type=['xlsx','xls'], key="gopass")
+comercio_file = st.sidebar.file_uploader("Cargar archivo del Comercio (CSV o Excel)", type=['csv','xlsx','xls'])
+gopass_file   = st.sidebar.file_uploader("Cargar archivo de Gopass (Excel)", type=['xlsx','xls'])
 
 if comercio_file and gopass_file:
     try:
-        with st.spinner("Cargando archivo comercio..."):
+        with st.spinner("Cargando archivo Comercio..."):
             if comercio_file.name.lower().endswith('.csv'):
                 comercio_df = pd.read_csv(comercio_file, sep=';', encoding='utf-8', engine="python")
             else:
@@ -154,7 +148,7 @@ if comercio_file and gopass_file:
         with st.spinner("Cargando archivo Gopass..."):
             gopass_df = pd.read_excel(gopass_file)
 
-        st.success("✅ Archivos cargados")
+        st.success("✅ Archivos cargados correctamente")
 
         if st.button("🚀 Iniciar Validación de Dobles Cobros"):
             comercio_filtered, comercio_keys = process_comercio_base(comercio_df)
@@ -164,17 +158,17 @@ if comercio_file and gopass_file:
             if possible_doubles.empty:
                 st.success("✅ No se encontraron posibles dobles cobros.")
             else:
-                st.subheader("⚠️ Posibles Dobles Cobros (llaves)")
+                st.subheader("⚠️ Posibles Dobles Cobros")
                 st.dataframe(possible_doubles, use_container_width=True)
 
-                confirmed = find_confirmed_doubles(possible_doubles, comercio_df, gopass_processed)
+                confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
                 if confirmed.empty:
                     st.info("No se encontraron dobles cobros confirmados.")
                 else:
-                    st.subheader("🚨 Dobles Cobros Confirmados (llaves)")
+                    st.subheader("🚨 Dobles Cobros Confirmados")
                     st.dataframe(confirmed, use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error al procesar los archivos: {str(e)}")
+        st.error(f"Error procesando archivos: {str(e)}")
 else:
     st.info("👆 Carga ambos archivos en la barra lateral para comenzar.")
