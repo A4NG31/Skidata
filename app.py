@@ -278,10 +278,12 @@ def find_confirmed_doubles(possible_df, comercio_df_original):
 # -------------------------
 # Interfaz
 # -------------------------
-st.sidebar.header("📁 Cargar Archivos")
+st.sidebar.header("📁 Cargar Archivo del Comercio")
 
 comercio_file = st.sidebar.file_uploader("Cargar archivo del Comercio (CSV o Excel)", type=['csv','xlsx','xls'])
 gopass_file   = st.sidebar.file_uploader("Cargar archivo de Gopass (Excel)", type=['xlsx','xls'])
+
+st.sidebar.header("📁 Cargar Archivo de Gopass")
 
 if comercio_file and gopass_file:
     try:
