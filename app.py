@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 # Configuración página
 # -------------------------
 st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", layout="wide")
-st.title("Validador de Dobles Cobros SKIDATA")
+st.title("🚗 Validador de Dobles Cobros")
 st.markdown("---")
 
 # ===== CSS Personalizado =====
@@ -22,9 +22,9 @@ st.markdown("""
     background-color: #0E1117;
 }
 
-/* Sidebar con colores que combinan con el logo GoPass */
+/* Sidebar con colores azul y naranja */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #1a1f35 0%, #2d1f35 100%) !important;
+    background: linear-gradient(180deg, #1a2f4e 0%, #2d3c5a 100%) !important;
     color: white !important;
     width: 300px !important;
     padding: 20px 10px !important;
@@ -53,7 +53,7 @@ st.markdown("""
     content: "Buscar archivo" !important;
     font-size: 14px !important;
     color: white !important;
-    background-color: #4a2c7e;
+    background-color: #e67e22;
     padding: 8px 12px;
     border-radius: 4px;
     font-weight: bold !important;
@@ -61,7 +61,7 @@ st.markdown("""
 
 /* Botones */
 .stButton > button {
-    background-color: #4a2c7e !important;
+    background-color: #e67e22 !important;
     color: white !important;
     border: none;
     border-radius: 6px;
@@ -71,14 +71,14 @@ st.markdown("""
 }
 
 .stButton > button:hover {
-    background-color: #6b3dad !important;
+    background-color: #f39c12 !important;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 /* Títulos y texto */
 h1, h2, h3 {
-    color: #4a2c7e !important;
+    color: #2c3e50 !important;
 }
 
 /* Dataframes */
@@ -92,12 +92,12 @@ h1, h2, h3 {
     background-color: #f0f2f6;
     border-radius: 8px;
     padding: 15px;
-    border-left: 4px solid #4a2c7e;
+    border-left: 4px solid #3498db;
 }
 
 /* Progress bar */
 .stProgress > div > div {
-    background-color: #4a2c7e;
+    background-color: #3498db;
 }
 
 /* Alertas */
@@ -114,6 +114,26 @@ h1, h2, h3 {
     padding: 15px;
     border-radius: 12px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Encabezados de sección */
+.section-header {
+    background: linear-gradient(90deg, #3498db 0%, #2c3e50 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+/* Mejora para las métricas */
+[data-testid="stMetricValue"] {
+    color: #3498db !important;
+    font-size: 24px !important;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #2c3e50 !important;
+    font-weight: bold !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -283,7 +303,7 @@ if comercio_file and gopass_file:
                 if possible_doubles.empty:
                     st.success("✅ No se encontraron posibles dobles cobros.")
                 else:
-                    st.subheader("⚠️ Posibles Dobles Cobros")
+                    st.markdown('<div class="section-header">⚠️ Posibles Dobles Cobros</div>', unsafe_allow_html=True)
                     st.dataframe(possible_doubles, use_container_width=True)
 
                     confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
@@ -297,14 +317,14 @@ if comercio_file and gopass_file:
                     if confirmed.empty:
                         st.info("No se encontraron dobles cobros confirmados.")
                     else:
-                        st.subheader("🚨 Dobles Cobros Confirmados")
+                        st.markdown('<div class="section-header">🚨 Dobles Cobros Confirmados</div>', unsafe_allow_html=True)
                         st.dataframe(confirmed, use_container_width=True)
 
                         # -------------------------
                         # MINI DASHBOARD
                         # -------------------------
                         st.markdown("---")
-                        st.header("📊 Dashboard de Resultados")
+                        st.markdown('<div class="section-header">📊 Dashboard de Resultados</div>', unsafe_allow_html=True)
 
                         col1, col2 = st.columns(2)
 
@@ -316,7 +336,7 @@ if comercio_file and gopass_file:
                             })
                             fig1 = px.bar(base_counts, x="Base", y="Registros", text="Registros",
                                         color="Base", 
-                                        color_discrete_sequence=["#4a2c7e", "#6b3dad"],
+                                        color_discrete_sequence=["#3498db", "#e67e22"],
                                         title="Cantidad de registros por base")
                             fig1.update_traces(textposition="outside")
                             fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)')
@@ -331,7 +351,7 @@ if comercio_file and gopass_file:
                                 "Cantidad": [total_confirmados, total_no_confirmados]
                             })
                             fig2 = px.pie(pie_data, names="Categoria", values="Cantidad", hole=0.5,
-                                        color_discrete_sequence=["#4a2c7e", "#9d71c6"],
+                                        color_discrete_sequence=["#3498db", "#e67e22"],
                                         title="Proporción de dobles cobros confirmados")
                             fig2.update_traces(textinfo='percent+label')
                             st.plotly_chart(fig2, use_container_width=True)
