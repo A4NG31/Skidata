@@ -3,73 +3,149 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import re
-import plotly.express as px
 
 # -------------------------
 # Configuración página
 # -------------------------
-st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", layout="wide", initial_sidebar_state="expanded")
-st.title("🚗 Validador de Dobles Cobros")
-st.markdown("---")
+st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", layout="wide")
 
-# ===== CSS Sidebar y estilo general =====
+# =========================
+# Estilos CSS - UI moderno
+# =========================
 st.markdown("""
 <style>
-/***** Estilo General *****/
-body {
-    background-color: #F9FAFB;
-    color: #111827;
-    font-family: 'Inter', sans-serif;
+/* --- Global app background and font --- */
+:root{
+    --bg:#0f1720;         /* very dark blue/gray */
+    --card:#11121a;       /* card background */
+    --muted:#9aa6b2;      /* muted text */
+    --accent:#00cfff;     /* primary accent - cyan */
+    --accent-2:#00b894;   /* secondary - teal */
+    --glass: rgba(255,255,255,0.03);
 }
 
-/* Sidebar fijo y elegante */
+body, .css-1d391kg, .reportview-container .main {
+    background: linear-gradient(180deg, var(--bg) 0%, #0b1220 100%) !important;
+    color: #e6eef6 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+/* --- Sidebar fixed and styled --- */
 [data-testid="stSidebar"] {
-    background-color: #FFFFFF !important;
-    border-right: 1px solid #E5E7EB !important;
-    padding: 20px 15px !important;
+    background: linear-gradient(180deg, #0d1116, #12141a) !important;
+    border-right: 1px solid rgba(255,255,255,0.03) !important;
+    width: 320px !important;
+    padding: 26px !important;
+    position: fixed !important;        /* keep sidebar fixed */
+    height: 100vh !important;
+    overflow: auto !important;
 }
 
-/* Encabezados */
-[data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, 
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] label {
-    color: #111827 !important;
-    font-family: 'Inter', sans-serif;
+/* Hide the collapse button so sidebar can't be hidden */
+[data-testid="stSidebarNav"] button { display: none !important; }
+
+/* Sidebar headings and text */
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] p {
+    color: #dff7ff !important;
+}
+[data-testid="stSidebar"] h1 { color: var(--accent) !important; font-weight:700 !important; }
+
+/* File uploader area styling */
+[data-testid="stSidebar"] .uppy-Dashboard-AddFiles {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)) !important;
+    border: 1px dashed rgba(255,255,255,0.06) !important;
+    padding: 14px !important;
+    border-radius: 10px !important;
 }
 
-/* Botones */
-button[kind="primary"] {
-    background-color: #14B8A6 !important;
-    color: white !important;
-    border-radius: 8px !important;
+/* Browse button */
+[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2)) !important;
+    color: #022028 !important;
+    font-weight: 700 !important;
     border: none !important;
+    padding: 8px 14px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 6px 18px rgba(0,200,255,0.08) !important;
 }
-button[kind="primary"]:hover {
-    background-color: #0D9488 !important;
+[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button:hover{ transform: translateY(-2px); }
+
+/* Sidebar small labels */
+[data-testid="stSidebar"] label, [data-testid="stSidebar"] .stMarkdown p {
+    color: var(--muted) !important;
 }
 
-/* Dataframe */
-[data-testid="stDataFrame"] {
-    border: 1px solid #E5E7EB !important;
+/* Inputs look like cards */
+[data-testid="stSidebar"] .stTextInput > div, [data-testid="stSidebar"] .stSelectbox > div, [data-testid="stSidebar"] .stMultiSelect > div {
+    background: var(--card) !important;
     border-radius: 8px !important;
-    background: white !important;
+    padding: 6px 10px !important;
+    color: #e6eef6 !important;
 }
+
+/* Main area - leave space for fixed sidebar */
+.css-1d391kg .main > div:first-child {
+    margin-left: 360px !important; /* give room for sidebar */
+}
+
+/* Header */
+.app-header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap: 12px; margin-bottom: 8px;
+}
+.app-title{ font-size:28px; font-weight:800; color: #eafcff; }
+.app-sub{ color: var(--muted); font-size:13px; }
+
+/* Card / panel style for results */
+.card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius: 12px; padding: 18px; margin-bottom: 16px;
+    box-shadow: 0 6px 20px rgba(2,12,27,0.6);
+    border: 1px solid rgba(255,255,255,0.03);
+}
+
+/* Accent buttons */
+.stButton>button {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2)) !important;
+    color: #022028 !important; font-weight:700; padding: 10px 18px; border-radius: 10px; border: none;
+}
+.stButton>button:hover{ transform: translateY(-2px); }
+
+/* Dataframe container (streamlit) */
+.element-container .stDataFrame, .stDataFrame {
+    border-radius: 10px !important; overflow: hidden !important;
+}
+
+/* Table header accent */
+.stDataFrame thead tr th{ background: linear-gradient(90deg, rgba(0,200,255,0.08), rgba(0,184,148,0.06)) !important; }
+
+/* Make messages (success, info, error) cleaner */
+.stAlert {
+    border-radius: 10px !important;
+}
+
+/* Small responsive tweaks */
+@media (max-width: 900px){
+    [data-testid="stSidebar"]{ position: relative; width:100% !important; height:auto !important; }
+    .css-1d391kg .main > div:first-child { margin-left: 0 !important; }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-# Logo de GoPass con HTML
+# Logo de GoPass con HTML (mejor posicionado)
 st.markdown("""
-<div style="display: flex; justify-content: center; margin-bottom: 30px;">
-    <img src="https://i.imgur.com/z9xt46F.jpeg"
-         style="width: 40%; border-radius: 12px; display: block; margin: 0 auto;" 
-         alt="Logo Gopass">
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:22px;">
+    <img src="https://i.imgur.com/z9xt46F.jpeg" style="width:64px; height:64px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.6);" alt="Logo Gopass">
+    <div>
+        <div class="app-title">🚗 Validador de Dobles Cobros</div>
+        <div class="app-sub">Interfaz limpia — detecta posibles y confirmados con tolerancia de tiempo</div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
 # -------------------------
-# Helpers
+# Helpers (sin cambios relevantes)
 # -------------------------
 def clean_colnames(df):
     df.columns = [str(c).strip() for c in df.columns]
@@ -97,6 +173,7 @@ def plate_is_valid(plate):
 # -------------------------
 # Procesamiento Base Comercio
 # -------------------------
+
 def process_comercio_base(df):
     df = clean_colnames(df)
     required_cols = ['Nº de tarjeta', 'Tarjeta', 'Movimiento', 'Fecha/Hora', 'Matrícula']
@@ -130,6 +207,7 @@ def process_comercio_base(df):
 # -------------------------
 # Procesamiento Base Gopass
 # -------------------------
+
 def process_gopass_base(df):
     df = clean_colnames(df)
     required_cols = ['Fecha de entrada', 'Fecha de salida', 'Transacción', 'Placa Vehiculo']
@@ -149,8 +227,9 @@ def process_gopass_base(df):
 # -------------------------
 # Buscar posibles dobles cobros (con tolerancia)
 # -------------------------
+
 def find_possible_doubles(comercio_keys, gopass_df):
-    st.write("🔍 Buscando posibles dobles cobros (±5 min)...")
+    st.info("🔍 Buscando posibles dobles cobros (±5 min)...")
 
     merged = comercio_keys.merge(
         gopass_df[['Transacción','Fecha_entrada_norm_full','Fecha_salida_norm_full','llave_validacion','Placa_clean']],
@@ -168,6 +247,7 @@ def find_possible_doubles(comercio_keys, gopass_df):
 # -------------------------
 # Confirmar dobles cobros
 # -------------------------
+
 def find_confirmed_doubles(possible_df, comercio_df_original):
     if possible_df is None or possible_df.empty:
         return pd.DataFrame()
@@ -189,10 +269,29 @@ def find_confirmed_doubles(possible_df, comercio_df_original):
 # -------------------------
 # Interfaz
 # -------------------------
-st.sidebar.header("📁 Cargar Archivos")
+with st.sidebar:
+    st.header("📁 Cargar Archivos")
+    comercio_file = st.file_uploader("Cargar archivo del Comercio (CSV o Excel)", type=['csv','xlsx','xls'])
+    gopass_file   = st.file_uploader("Cargar archivo de Gopass (Excel)", type=['xlsx','xls'])
+    st.markdown("---")
+    st.caption("Formato esperado: columnas mínimas en cada archivo. Revisa mensajes de error si algo falta.")
 
-comercio_file = st.sidebar.file_uploader("Cargar archivo del Comercio (CSV o Excel)", type=['csv','xlsx','xls'])
-gopass_file   = st.sidebar.file_uploader("Cargar archivo de Gopass (Excel)", type=['xlsx','xls'])
+# Cuerpo principal
+st.markdown("""
+<div class="card">
+    <strong>Instrucciones rápidas:</strong>
+    <ul>
+        <li>Sube los archivos en la barra lateral. El CSV de comercio puede usar separador punto y coma.</li>
+        <li>Presiona <em>Iniciar Validación</em> para ver posibles y confirmados.</li>
+        <li>Los resultados muestran tolerancia de ±5 minutos entre registros.</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
+
+if 'comercio_file' not in locals():
+    comercio_file = None
+if 'gopass_file' not in locals():
+    gopass_file = None
 
 if comercio_file and gopass_file:
     try:
@@ -215,46 +314,20 @@ if comercio_file and gopass_file:
             if possible_doubles.empty:
                 st.success("✅ No se encontraron posibles dobles cobros.")
             else:
-                st.subheader("⚠️ Posibles Dobles Cobros")
+                st.markdown('<div class="card"><h3>⚠️ Posibles Dobles Cobros</h3></div>', unsafe_allow_html=True)
                 st.dataframe(possible_doubles, use_container_width=True)
 
                 confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
                 if confirmed.empty:
                     st.info("No se encontraron dobles cobros confirmados.")
                 else:
-                    st.subheader("🚨 Dobles Cobros Confirmados")
+                    st.markdown('<div class="card"><h3>🚨 Dobles Cobros Confirmados</h3></div>', unsafe_allow_html=True)
                     st.dataframe(confirmed, use_container_width=True)
-
-                    # ===== Dashboard de análisis =====
-                    st.markdown("---")
-                    st.header("📊 Dashboard de Dobles Cobros")
-
-                    total_confirmados = len(confirmed)
-                    placas_unicas = confirmed['Placa_clean'].nunique()
-
-                    col1, col2 = st.columns(2)
-                    col1.metric("Total Confirmados", total_confirmados)
-                    col2.metric("Placas Únicas", placas_unicas)
-
-                    # Gráfico por placa
-                    fig1 = px.bar(confirmed.groupby('Placa_clean').size().reset_index(name='Cantidad'),
-                                  x='Placa_clean', y='Cantidad',
-                                  title="Dobles Cobros por Placa", color='Cantidad', color_continuous_scale='teal')
-                    st.plotly_chart(fig1, use_container_width=True)
-
-                    # Timeline
-                    fig2 = px.scatter(confirmed, x='llave_validacion', y='Placa_clean',
-                                      title="Timeline de Dobles Cobros",
-                                      color='Placa_clean')
-                    st.plotly_chart(fig2, use_container_width=True)
-
-                    # Descargar resultados
-                    st.download_button("💾 Descargar Confirmados en CSV",
-                                       data=confirmed.to_csv(index=False).encode('utf-8'),
-                                       file_name="dobles_cobros_confirmados.csv",
-                                       mime="text/csv")
 
     except Exception as e:
         st.error(f"Error procesando archivos: {str(e)}")
 else:
     st.info("👆 Carga ambos archivos en la barra lateral para comenzar.")
+
+# Footer small note
+st.markdown("<div style='margin-top:14px;color:var(--muted);font-size:12px'>Powered by GoPass • Interfaz optimizada</div>", unsafe_allow_html=True)
