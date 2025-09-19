@@ -11,6 +11,83 @@ st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", la
 st.title("🚗 Validador de Dobles Cobros")
 st.markdown("---")
 
+# ===== CSS Sidebar y Dashboard =====
+st.markdown("""
+    <style>
+    /* ===== Sidebar ===== */
+    [data-testid="stSidebar"] {
+        background-color: #1E1E2F !important;
+        color: white !important;
+        width: 300px !important;
+        padding: 20px 10px 20px 10px !important;
+        border-right: 1px solid #333 !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+
+    [data-testid="stSidebarNav"] button {
+        background: #2E2E3E !important;
+        color: white !important;
+        border-radius: 6px !important;
+    }
+
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3 {
+        color: #00CFFF !important;
+    }
+
+    [data-testid="stSidebar"] input[type="text"] {
+        color: black !important;
+        background-color: white !important;
+        border-radius: 6px !important;
+        padding: 5px !important;
+    }
+
+    [data-testid="stSidebar"] .stDateInput svg {
+        color: #00CFFF !important;
+    }
+    
+    /* ===== Dashboard Styles ===== */
+    .dashboard-header {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        color: white;
+        text-align: center;
+    }
+    
+    .metric-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+    }
+    
+    .chart-container {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Logo de GoPass con HTML
+st.markdown("""
+<div style="display: flex; justify-content: center; margin-bottom: 30px;">
+    <img src="https://i.imgur.com/z9xt46F.jpeg"
+         style="width: 50%; border-radius: 10px; display: block; margin: 0 auto;" 
+         alt="Logo Gopass">
+</div>
+""", unsafe_allow_html=True)
+
+
 # -------------------------
 # Helpers
 # -------------------------
