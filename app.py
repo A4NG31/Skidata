@@ -293,8 +293,17 @@ if comercio_file and gopass_file:
         # Leer base del comercio
         with st.spinner("Cargando base del comercio..."):
             if comercio_file.name.endswith('.csv'):
-                comercio_df = pd.read_csv(comercio_file)
-                st.info("Archivo CSV cargado y convertido internamente.")
+                # Intentar con diferentes separadores
+                try:
+                    comercio_df = pd.read_csv(comercio_file, sep=';', encoding='utf-8')
+                    st.info("Archivo CSV cargado con separador ';'")
+                except:
+                    try:
+                        comercio_df = pd.read_csv(comercio_file, sep=';', encoding='latin-1')
+                        st.info("Archivo CSV cargado con separador ';' y encoding latin-1")
+                    except:
+                        comercio_df = pd.read_csv(comercio_file, sep=',')
+                        st.info("Archivo CSV cargado con separador ','")
             else:
                 comercio_df = pd.read_excel(comercio_file)
         
@@ -303,6 +312,23 @@ if comercio_file and gopass_file:
             gopass_df = pd.read_excel(gopass_file)
         
         st.success("✅ Ambos archivos cargados correctamente!")
+        
+        # Verificar que las columnas esperadas estén presentes
+        expected_comercio_cols = ['Nº de tarjeta', 'Tarjeta', 'Movimiento', 'Fecha/Hora', 'Matrícula']
+        missing_comercio_cols = [col for col in expected_comercio_cols if col not in comercio_df.columns]
+        
+        if missing_comercio_cols:
+            st.error(f"❌ Faltan columnas en la base del comercio: {missing_comercio_cols}")
+            st.write("Columnas disponibles:", list(comercio_df.columns))
+            st.stop()
+        
+        expected_gopass_cols = ['Fecha de entrada', 'Fecha de salida', 'Transacción', 'Placa Vehiculo']
+        missing_gopass_cols = [col for col in expected_gopass_cols if col not in gopass_df.columns]
+        
+        if missing_gopass_cols:
+            st.error(f"❌ Faltan columnas en la base de Gopass: {missing_gopass_cols}")
+            st.write("Columnas disponibles:", list(gopass_df.columns))
+            st.stop()
         
         # Mostrar información de los archivos
         col1, col2 = st.columns(2)
