@@ -15,37 +15,36 @@ st.set_page_config(
 st.title("🚗 Validador de Dobles Cobros")
 st.markdown("---")
 
-def normalize_datetime(date_str):
+def normalize_datetime_vectorized(date_series):
     """
-    Normaliza diferentes formatos de fecha/hora a un formato estándar
+    Normaliza fechas de forma vectorizada usando pandas
     """
-    if pd.isna(date_str):
-        return None
+    # Convertir a string y limpiar
+    date_series = date_series.astype(str).str.strip()
+    date_series = date_series.str.replace(r'\s+', ' ', regex=True)
     
-    # Convertir a string si no lo es
-    date_str = str(date_str)
+    # Intentar conversión directa con pandas (más rápido)
+    try:
+        return pd.to_datetime(date_series, format='%d/%m/%Y %H:%M:%S', errors='coerce')
+    except:
+        pass
     
-    # Remover espacios extra y convertir a minúsculas para a.m./p.m.
-    date_str = re.sub(r'\s+', ' ', date_str.strip())
-    
-    # Patrones comunes de fecha
-    patterns = [
-        r'(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(a\.|p\.)\s*m\.',
-        r'(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)',
-        r'(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})',
-        r'(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})'
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, date_str, re.IGNORECASE)
-        if match:
-            if len(match.groups()) >= 6:
-                if pattern == patterns[3]:  # Formato YYYY-MM-DD
-                    year, month, day, hour, minute, second = match.groups()[:6]
-                else:  # Formato DD/MM/YYYY
-                    day, month, year, hour, minute, second = match.groups()[:6]
+    # Si falla, usar regex para casos específicos
+    def parse_single_date(date_str):
+        if pd.isna(date_str) or date_str == 'nan':
+            return None
+        
+        patterns = [
+            r'(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(a\.|p\.)\s*m\.',
+            r'(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)',
+            r'(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, str(date_str), re.IGNORECASE)
+            if match:
+                day, month, year, hour, minute, second = match.groups()[:6]
                 
-                # Manejar AM/PM si existe
                 if len(match.groups()) > 6 and match.groups()[6]:
                     am_pm = match.groups()[6].lower()
                     hour = int(hour)
@@ -58,109 +57,84 @@ def normalize_datetime(date_str):
                     return datetime(int(year), int(month), int(day), int(hour), int(minute), int(second))
                 except ValueError:
                     continue
+        
+        try:
+            return pd.to_datetime(str(date_str))
+        except:
+            return None
     
-    # Si no coincide con ningún patrón, intentar con pandas
-    try:
-        return pd.to_datetime(date_str)
-    except:
-        return None
+    return date_series.apply(parse_single_date)
 
-def create_validation_key(entry_date, exit_date):
+def create_validation_key_vectorized(entry_dates, exit_dates):
     """
-    Crea una llave de validación con fecha de entrada y salida (sin minutos ni segundos)
+    Crea llaves de validación de forma vectorizada
     """
-    if pd.isna(entry_date) or pd.isna(exit_date):
-        return None
-    
-    # Formatear sin minutos ni segundos
-    entry_str = entry_date.strftime("%d/%m/%Y %H")
-    exit_str = exit_date.strftime("%d/%m/%Y %H")
-    
-    return f"{entry_str}|{exit_str}"
+    entry_str = entry_dates.dt.strftime("%d/%m/%Y %H")
+    exit_str = exit_dates.dt.strftime("%d/%m/%Y %H")
+    return entry_str + "|" + exit_str
 
-def is_valid_license_plate(plate):
+def process_comercio_base_optimized(df):
     """
-    Valida si una matrícula cumple el formato: 3 letras + 3 números
-    """
-    if pd.isna(plate):
-        return False
-    
-    plate_str = str(plate).strip().upper()
-    pattern = r'^[A-Z]{3}\d{3}$'
-    return bool(re.match(pattern, plate_str)) and len(plate_str) == 6
-
-def process_comercio_base(df):
-    """
-    Procesa la base del comercio
+    Procesa la base del comercio de forma optimizada
     """
     st.write("### Procesando Base del Comercio...")
-    
-    # Mostrar información inicial
     st.write(f"Registros iniciales: {len(df)}")
     
-    # Normalizar fecha/hora
+    # Normalizar fecha/hora vectorizada
     st.write("📅 Normalizando formato de Fecha/Hora...")
-    df['Fecha/Hora_normalizada'] = df['Fecha/Hora'].apply(normalize_datetime)
+    with st.spinner("Procesando fechas..."):
+        df['Fecha/Hora_normalizada'] = normalize_datetime_vectorized(df['Fecha/Hora'])
     
     # Filtrar por tarjeta
     st.write("🎫 Filtrando por tipo de tarjeta...")
     df_filtered = df[df['Tarjeta'].isin(['TiqueteVehiculo', 'Una salida 01'])].copy()
     st.write(f"Registros después del filtro: {len(df_filtered)}")
     
-    # Crear llaves de validación por Nº de tarjeta
+    # Crear llaves de validación usando groupby (más eficiente)
     st.write("🔑 Creando llaves de validación...")
-    
-    validation_keys = []
-    card_numbers = df_filtered['Nº de tarjeta'].unique()
-    
-    progress_bar = st.progress(0)
-    total_cards = len(card_numbers)
-    
-    for i, card_num in enumerate(card_numbers):
-        card_records = df_filtered[df_filtered['Nº de tarjeta'] == card_num]
+    with st.spinner("Agrupando por número de tarjeta..."):
+        # Pivot para obtener entrada y salida por tarjeta
+        pivot_data = df_filtered.pivot_table(
+            index='Nº de tarjeta',
+            columns='Movimiento',
+            values='Fecha/Hora_normalizada',
+            aggfunc='first'
+        ).reset_index()
         
-        # Buscar entrada y salida
-        entrada = card_records[card_records['Movimiento'] == 'Entrada']
-        salida = card_records[card_records['Movimiento'] == 'Salida']
+        # Filtrar solo los que tienen entrada y salida
+        valid_cards = pivot_data.dropna(subset=['Entrada', 'Salida'])
         
-        if not entrada.empty and not salida.empty:
-            entry_date = entrada['Fecha/Hora_normalizada'].iloc[0]
-            exit_date = salida['Fecha/Hora_normalizada'].iloc[0]
-            
-            validation_key = create_validation_key(entry_date, exit_date)
-            if validation_key:
-                validation_keys.append({
-                    'Nº de tarjeta': card_num,
-                    'Fecha_entrada': entry_date,
-                    'Fecha_salida': exit_date,
-                    'llave_validacion': validation_key
-                })
+        # Crear llaves vectorizadas
+        valid_cards['llave_validacion'] = create_validation_key_vectorized(
+            valid_cards['Entrada'], 
+            valid_cards['Salida']
+        )
         
-        progress_bar.progress((i + 1) / total_cards)
+        # Preparar resultado
+        comercio_keys_df = valid_cards[['Nº de tarjeta', 'Entrada', 'Salida', 'llave_validacion']].copy()
+        comercio_keys_df.columns = ['Nº de tarjeta', 'Fecha_entrada', 'Fecha_salida', 'llave_validacion']
     
-    comercio_keys_df = pd.DataFrame(validation_keys)
     st.write(f"Llaves de validación creadas: {len(comercio_keys_df)}")
-    
     return df_filtered, comercio_keys_df
 
-def process_gopass_base(df):
+def process_gopass_base_optimized(df):
     """
-    Procesa la base de Gopass
+    Procesa la base de Gopass de forma optimizada
     """
     st.write("### Procesando Base de Gopass...")
-    
     st.write(f"Registros iniciales: {len(df)}")
     
-    # Normalizar fechas
+    # Normalizar fechas vectorizadas
     st.write("📅 Normalizando fechas de entrada y salida...")
-    df['Fecha_entrada_norm'] = df['Fecha de entrada'].apply(normalize_datetime)
-    df['Fecha_salida_norm'] = df['Fecha de salida'].apply(normalize_datetime)
+    with st.spinner("Procesando fechas..."):
+        df['Fecha_entrada_norm'] = normalize_datetime_vectorized(df['Fecha de entrada'])
+        df['Fecha_salida_norm'] = normalize_datetime_vectorized(df['Fecha de salida'])
     
-    # Crear llaves de validación
+    # Crear llaves de validación vectorizadas
     st.write("🔑 Creando llaves de validación...")
-    df['llave_validacion'] = df.apply(
-        lambda row: create_validation_key(row['Fecha_entrada_norm'], row['Fecha_salida_norm']), 
-        axis=1
+    df['llave_validacion'] = create_validation_key_vectorized(
+        df['Fecha_entrada_norm'], 
+        df['Fecha_salida_norm']
     )
     
     # Remover registros sin llave válida
@@ -169,104 +143,128 @@ def process_gopass_base(df):
     
     return df_valid
 
-def find_possible_double_billing(comercio_keys, gopass_df):
+def find_possible_double_billing_optimized(comercio_keys, gopass_df):
     """
-    Encuentra posibles dobles cobros con tolerancia de 5 minutos
+    Encuentra posibles dobles cobros de forma súper optimizada usando cross join
     """
     st.write("### 🔍 Buscando Posibles Dobles Cobros...")
     
-    possible_doubles = []
-    
-    progress_bar = st.progress(0)
-    total_comercio = len(comercio_keys)
-    
-    for i, comercio_row in comercio_keys.iterrows():
-        comercio_entry = comercio_row['Fecha_entrada']
-        comercio_exit = comercio_row['Fecha_salida']
+    with st.spinner("Comparando registros..."):
+        # Cross join usando merge con key dummy
+        comercio_keys['_merge_key'] = 1
+        gopass_df['_merge_key'] = 1
         
-        for j, gopass_row in gopass_df.iterrows():
-            gopass_entry = gopass_row['Fecha_entrada_norm']
-            gopass_exit = gopass_row['Fecha_salida_norm']
-            
-            # Tolerancia de 5 minutos
-            # Entrada del comercio puede ser hasta 5 min mayor que Gopass
-            entry_diff = (comercio_entry - gopass_entry).total_seconds() / 60
-            # Salida del comercio puede ser hasta 5 min menor que Gopass
-            exit_diff = (gopass_exit - comercio_exit).total_seconds() / 60
-            
-            if -5 <= entry_diff <= 5 and -5 <= exit_diff <= 5:
-                possible_doubles.append({
-                    'Nº de tarjeta': comercio_row['Nº de tarjeta'],
-                    'Transacción_Gopass': gopass_row['Transacción'],
-                    'Comercio_entrada': comercio_entry,
-                    'Comercio_salida': comercio_exit,
-                    'Gopass_entrada': gopass_entry,
-                    'Gopass_salida': gopass_exit,
-                    'Diferencia_entrada_min': entry_diff,
-                    'Diferencia_salida_min': exit_diff,
-                    'llave_validacion_comercio': comercio_row['llave_validacion'],
-                    'llave_validacion_gopass': gopass_row['llave_validacion']
-                })
+        cross_joined = comercio_keys.merge(
+            gopass_df[['Transacción', 'Fecha_entrada_norm', 'Fecha_salida_norm', 'llave_validacion', '_merge_key']],
+            on='_merge_key',
+            suffixes=('_comercio', '_gopass')
+        ).drop('_merge_key', axis=1)
         
-        progress_bar.progress((i + 1) / total_comercio)
+        # Calcular diferencias en minutos de forma vectorizada
+        cross_joined['Diferencia_entrada_min'] = (
+            cross_joined['Fecha_entrada'] - cross_joined['Fecha_entrada_norm']
+        ).dt.total_seconds() / 60
+        
+        cross_joined['Diferencia_salida_min'] = (
+            cross_joined['Fecha_salida_norm'] - cross_joined['Fecha_salida']
+        ).dt.total_seconds() / 60
+        
+        # Filtrar con tolerancia de ±5 minutos
+        mask = (
+            cross_joined['Diferencia_entrada_min'].between(-5, 5) &
+            cross_joined['Diferencia_salida_min'].between(-5, 5)
+        )
+        
+        possible_doubles_df = cross_joined[mask].copy()
+        
+        # Renombrar columnas para claridad
+        possible_doubles_df = possible_doubles_df.rename(columns={
+            'Transacción': 'Transacción_Gopass',
+            'Fecha_entrada': 'Comercio_entrada',
+            'Fecha_salida': 'Comercio_salida',
+            'Fecha_entrada_norm': 'Gopass_entrada',
+            'Fecha_salida_norm': 'Gopass_salida',
+            'llave_validacion_comercio': 'llave_validacion_comercio',
+            'llave_validacion_gopass': 'llave_validacion_gopass'
+        })
     
-    possible_doubles_df = pd.DataFrame(possible_doubles)
     st.write(f"Posibles dobles cobros encontrados: {len(possible_doubles_df)}")
-    
     return possible_doubles_df
 
-def find_confirmed_double_billing(possible_doubles_df, comercio_df_original, gopass_df):
+def find_confirmed_double_billing_optimized(possible_doubles_df, comercio_df_original, gopass_df):
     """
-    Encuentra dobles cobros confirmados usando matrículas
+    Confirma dobles cobros de forma optimizada usando merges
     """
     st.write("### ✅ Confirmando Dobles Cobros...")
     
-    confirmed_doubles = []
+    if len(possible_doubles_df) == 0:
+        return pd.DataFrame()
     
-    for _, possible_double in possible_doubles_df.iterrows():
-        card_number = possible_double['Nº de tarjeta']
+    with st.spinner("Validando matrículas..."):
+        # Preparar datos de matrículas válidas
+        comercio_df_original['Matrícula_clean'] = (
+            comercio_df_original['Matrícula']
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
         
-        # Buscar registros del comercio con este número de tarjeta
-        card_records = comercio_df_original[comercio_df_original['Nº de tarjeta'] == card_number]
+        # Filtrar matrículas válidas usando regex vectorizada
+        valid_plates_mask = comercio_df_original['Matrícula_clean'].str.match(r'^[A-Z]{3}\d{3}$', na=False)
+        comercio_plates = comercio_df_original[valid_plates_mask][['Nº de tarjeta', 'Matrícula_clean']].drop_duplicates()
         
-        # Encontrar matrícula válida
-        valid_plate = None
-        for _, record in card_records.iterrows():
-            plate = record['Matrícula']
-            if is_valid_license_plate(plate):
-                valid_plate = str(plate).strip().upper()
-                break
+        # Merge con posibles dobles cobros
+        merged_with_plates = possible_doubles_df.merge(
+            comercio_plates,
+            on='Nº de tarjeta',
+            how='inner'
+        )
         
-        if valid_plate:
-            # Crear llave de confirmación del comercio
-            comercio_confirmation_key = f"{possible_double['llave_validacion_comercio']}|{valid_plate}"
+        # Preparar datos de Gopass
+        gopass_plates = gopass_df[['Transacción', 'Placa Vehiculo']].copy()
+        gopass_plates['Placa_clean'] = (
+            gopass_plates['Placa Vehiculo']
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
+        
+        # Merge con datos de Gopass
+        final_merged = merged_with_plates.merge(
+            gopass_plates,
+            left_on='Transacción_Gopass',
+            right_on='Transacción',
+            how='inner'
+        )
+        
+        # Filtrar donde las placas coinciden
+        confirmed_doubles_df = final_merged[
+            final_merged['Matrícula_clean'] == final_merged['Placa_clean']
+        ].copy()
+        
+        # Crear llaves de confirmación
+        if len(confirmed_doubles_df) > 0:
+            confirmed_doubles_df['llave_confirmacion_comercio'] = (
+                confirmed_doubles_df['llave_validacion_comercio'] + "|" + 
+                confirmed_doubles_df['Matrícula_clean']
+            )
+            confirmed_doubles_df['llave_confirmacion_gopass'] = (
+                confirmed_doubles_df['llave_validacion_gopass'] + "|" + 
+                confirmed_doubles_df['Placa_clean']
+            )
             
-            # Buscar el registro correspondiente en Gopass
-            gopass_transaction = possible_double['Transacción_Gopass']
-            gopass_record = gopass_df[gopass_df['Transacción'] == gopass_transaction]
-            
-            if not gopass_record.empty:
-                gopass_plate = str(gopass_record['Placa Vehiculo'].iloc[0]).strip().upper()
-                gopass_confirmation_key = f"{possible_double['llave_validacion_gopass']}|{gopass_plate}"
-                
-                # Verificar si las llaves de confirmación coinciden
-                if comercio_confirmation_key == gopass_confirmation_key:
-                    confirmed_doubles.append({
-                        'Nº de tarjeta': card_number,
-                        'Transacción_Gopass': gopass_transaction,
-                        'Matrícula_Comercio': valid_plate,
-                        'Placa_Gopass': gopass_plate,
-                        'Comercio_entrada': possible_double['Comercio_entrada'],
-                        'Comercio_salida': possible_double['Comercio_salida'],
-                        'Gopass_entrada': possible_double['Gopass_entrada'],
-                        'Gopass_salida': possible_double['Gopass_salida'],
-                        'llave_confirmacion_comercio': comercio_confirmation_key,
-                        'llave_confirmacion_gopass': gopass_confirmation_key
-                    })
+            # Seleccionar columnas finales
+            result_cols = [
+                'Nº de tarjeta', 'Transacción_Gopass', 'Matrícula_clean', 'Placa_clean',
+                'Comercio_entrada', 'Comercio_salida', 'Gopass_entrada', 'Gopass_salida',
+                'llave_confirmacion_comercio', 'llave_confirmacion_gopass'
+            ]
+            confirmed_doubles_df = confirmed_doubles_df[result_cols].rename(columns={
+                'Matrícula_clean': 'Matrícula_Comercio',
+                'Placa_clean': 'Placa_Gopass'
+            })
     
-    confirmed_doubles_df = pd.DataFrame(confirmed_doubles)
     st.write(f"Dobles cobros confirmados: {len(confirmed_doubles_df)}")
-    
     return confirmed_doubles_df
 
 # Interfaz de usuario
@@ -351,13 +349,13 @@ if comercio_file and gopass_file:
         if st.button("🚀 Iniciar Validación de Dobles Cobros", type="primary"):
             
             # Procesar base del comercio
-            comercio_filtered, comercio_keys = process_comercio_base(comercio_df)
+            comercio_filtered, comercio_keys = process_comercio_base_optimized(comercio_df)
             
             # Procesar base de Gopass
-            gopass_processed = process_gopass_base(gopass_df)
+            gopass_processed = process_gopass_base_optimized(gopass_df)
             
             # Buscar posibles dobles cobros
-            possible_doubles = find_possible_double_billing(comercio_keys, gopass_processed)
+            possible_doubles = find_possible_double_billing_optimized(comercio_keys, gopass_processed)
             
             if len(possible_doubles) > 0:
                 # Mostrar posibles dobles cobros
@@ -365,7 +363,7 @@ if comercio_file and gopass_file:
                 st.dataframe(possible_doubles, use_container_width=True)
                 
                 # Buscar dobles cobros confirmados
-                confirmed_doubles = find_confirmed_double_billing(
+                confirmed_doubles = find_confirmed_double_billing_optimized(
                     possible_doubles, comercio_df, gopass_processed
                 )
                 
