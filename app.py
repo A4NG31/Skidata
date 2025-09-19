@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import re
+import plotly.express as px
 
 # -------------------------
 # Configuración página
@@ -14,16 +15,13 @@ st.markdown("---")
 # ===== CSS Sidebar =====
 st.markdown("""
 <style>
-/* ===== Sidebar ===== */
 [data-testid="stSidebar"] {
-    background-color: #1E1E2F !important;  /* fondo oscuro elegante */
+    background-color: #1E1E2F !important;
     color: white !important;
-    width: 300px !important;  /* ancho fijo */
-    padding: 20px 10px 20px 10px !important;
+    width: 300px !important;
+    padding: 20px 10px !important;
     border-right: 1px solid #333 !important;
 }
-
-/* Texto general en blanco */
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3,
@@ -32,79 +30,10 @@ st.markdown("""
 [data-testid="stSidebar"] .stCheckbox label {
     color: white !important; 
 }
-
-/* SOLO el label del file_uploader en blanco */
 [data-testid="stSidebar"] .stFileUploader > label {
     color: white !important;
     font-weight: bold;
 }
-
-/* Mantener en negro el resto del uploader */
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-title,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-subtitle,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-list button,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-Item-name,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-Item-status,
-[data-testid="stSidebar"] .stFileUploader span,
-[data-testid="stSidebar"] .stFileUploader div {
-    color: black !important;
-}
-
-/* ===== Botón de expandir/cerrar sidebar ===== */
-[data-testid="stSidebarNav"] button {
-    background: #2E2E3E !important;
-    color: white !important;
-    border-radius: 6px !important;
-}
-
-/* ===== Encabezados del sidebar ===== */
-[data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, 
-[data-testid="stSidebar"] h3 {
-    color: #00CFFF !important;
-}
-
-/* ===== Inputs de texto en el sidebar ===== */
-[data-testid="stSidebar"] input[type="text"],
-[data-testid="stSidebar"] input[type="password"] {
-    color: black !important;
-    background-color: white !important;
-    border-radius: 6px !important;
-    padding: 5px !important;
-}
-
-/* ===== Icono de ojo en campo de contraseña ===== */
-[data-testid="stSidebar"] button[data-testid="InputMenuButton"] {
-    background-color: white !important;
-}
-[data-testid="stSidebar"] button[data-testid="InputMenuButton"] svg {
-    fill: black !important;
-    color: black !important;
-}
-
-/* ===== BOTÓN "BROWSE FILES" ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button {
-    color: black !important;
-    background-color: #f0f0f0 !important;
-    border: 1px solid #ccc !important;
-}
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button:hover {
-    background-color: #e0e0e0 !important;
-}
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button:focus {
-    outline: 2px solid #4d90fe !important;
-}
-/* Texto dentro del botón Browse files */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span {
-    color: black !important;
-    font-weight: bold !important;
-}
-/* Texto alternativo para el botón Browse files */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button::after {
-    content: "Buscar archivo" !important;
-    color: black !important;
-}
-/* Ocultar el texto original si es necesario */
 [data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span:first-child {
     font-size: 0 !important;
 }
@@ -114,55 +43,10 @@ st.markdown("""
     color: black !important;
     font-weight: bold !important;
 }
-
-/* ===== Iconos dentro del file uploader ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-icon svg {
-    fill: black !important;
-}
-
-/* ===== Borde del área de carga ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles {
-    border: 2px dashed #ccc !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* ===== Texto de marcadores en sidebar ===== */
-[data-testid="stSidebar"] .stMarkdown p {
-    color: white !important;
-}
-
-/* ===== Checkboxes ===== */
-[data-testid="stSidebar"] .stCheckbox label {
-    color: white !important;
-}
-
-/* ===== Texto en multiselect ===== */
-[data-testid="stSidebar"] .stMultiSelect label,
-[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"] {
-    color: white !important;
-}
-[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="tag"] {
-    color: black !important;
-    background-color: #e0e0e0 !important;
-}
-
-/* ===== Botón de eliminar archivo ===== */
-[data-testid="stSidebar"] .uppy-Dashboard-Item-action--remove svg {
-    fill: black !important;
-}
-
-/* ===== ICONOS DE AYUDA (?) EN EL SIDEBAR ===== */
-[data-testid="stSidebar"] svg.icon {
-    stroke: white !important;   /* fuerza el trazo */
-    color: white !important;    /* asegura currentColor */
-    fill: none !important;      /* mantiene el estilo original */
-    opacity: 1 !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
-
-# Logo de GoPass con HTML
+# Logo de GoPass
 st.markdown("""
 <div style="display: flex; justify-content: center; margin-bottom: 30px;">
     <img src="https://i.imgur.com/z9xt46F.jpeg"
@@ -170,7 +54,6 @@ st.markdown("""
          alt="Logo Gopass">
 </div>
 """, unsafe_allow_html=True)
-
 
 # -------------------------
 # Helpers
@@ -251,11 +134,9 @@ def process_gopass_base(df):
     return df_valid
 
 # -------------------------
-# Buscar posibles dobles cobros (con tolerancia)
+# Buscar posibles dobles cobros
 # -------------------------
 def find_possible_doubles(comercio_keys, gopass_df):
-    st.write("🔍 Buscando posibles dobles cobros (±5 min)...")
-
     merged = comercio_keys.merge(
         gopass_df[['Transacción','Fecha_entrada_norm_full','Fecha_salida_norm_full','llave_validacion','Placa_clean']],
         on='llave_validacion', how='inner', suffixes=('_comercio','_gopass')
@@ -328,6 +209,37 @@ if comercio_file and gopass_file:
                 else:
                     st.subheader("🚨 Dobles Cobros Confirmados")
                     st.dataframe(confirmed, use_container_width=True)
+
+                    # -------------------------
+                    # MINI DASHBOARD
+                    # -------------------------
+                    st.markdown("---")
+                    st.header("📊 Dashboard de Resultados")
+
+                    col1, col2 = st.columns(2)
+
+                    # Gráfico 1: Totales de registros en bases originales
+                    with col1:
+                        base_counts = pd.DataFrame({
+                            "Base": ["Comercio", "GoPass"],
+                            "Registros": [len(comercio_df), len(gopass_df)]
+                        })
+                        fig1 = px.bar(base_counts, x="Base", y="Registros", text="Registros",
+                                      color="Base", title="Cantidad de registros por base")
+                        fig1.update_traces(textposition="outside")
+                        st.plotly_chart(fig1, use_container_width=True)
+
+                    # Gráfico 2: Proporción de dobles cobros confirmados
+                    with col2:
+                        total_confirmados = len(confirmed)
+                        total_no_confirmados = len(possible_doubles) - total_confirmados
+                        pie_data = pd.DataFrame({
+                            "Categoria": ["Confirmados", "No Confirmados"],
+                            "Cantidad": [total_confirmados, total_no_confirmados]
+                        })
+                        fig2 = px.pie(pie_data, names="Categoria", values="Cantidad", hole=0.5,
+                                      title="Proporción de dobles cobros confirmados")
+                        st.plotly_chart(fig2, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error procesando archivos: {str(e)}")
