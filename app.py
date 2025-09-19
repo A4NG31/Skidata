@@ -13,38 +13,68 @@ st.title("🚗 Validador de Dobles Cobros")
 st.markdown("---")
 
 # ===== CSS Sidebar =====
+import streamlit as st
+
+# Configuración de la página
+st.set_page_config(
+    page_title="Validador de Dobles Cobros",
+    page_icon="🚗",
+    layout="wide"
+)
+
+# CSS personalizado para el tema oscuro con sidebar elegante
 st.markdown("""
-<style>
-[data-testid="stSidebar"] {
-    background-color: #1E1E2F !important;
-    color: white !important;
-    width: 300px !important;
-    padding: 20px 10px !important;
-    border-right: 1px solid #333 !important;
-}
-[data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, 
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] .stMarkdown p,
-[data-testid="stSidebar"] .stCheckbox label {
-    color: white !important; 
-}
-[data-testid="stSidebar"] .stFileUploader > label {
-    color: white !important;
-    font-weight: bold;
-}
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span:first-child {
-    font-size: 0 !important;
-}
-[data-testid="stSidebar"] .uppy-Dashboard-AddFiles-list button span:first-child::after {
-    content: "Buscar archivo" !important;
-    font-size: 14px !important;
-    color: black !important;
-    font-weight: bold !important;
-}
-</style>
+    <style>
+    /* Fondo general */
+    .stApp {
+        background-color: #121212;
+        color: #f5f5f5;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: #1e1e1e !important;
+        border-right: 1px solid #2d2d2d;
+        padding: 15px;
+    }
+
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3, 
+    section[data-testid="stSidebar"] label {
+        color: #e0e0e0 !important;
+    }
+
+    /* Cajas de carga */
+    div[data-testid="stFileUploader"] {
+        background: #2a2a2a !important;
+        border: 1px solid #3d3d3d !important;
+        border-radius: 12px !important;
+        padding: 18px !important;
+    }
+
+    div[data-testid="stFileUploader"] p {
+        color: #cccccc !important;
+    }
+
+    /* Botones */
+    button {
+        background: linear-gradient(135deg, #0078d7, #00bfa5) !important;
+        color: white !important;
+        border-radius: 10px !important;
+        border: none !important;
+        font-weight: 600 !important;
+        padding: 8px 16px !important;
+    }
+
+    button:hover {
+        background: linear-gradient(135deg, #00bfa5, #0078d7) !important;
+    }
+    </style>
 """, unsafe_allow_html=True)
+
+
 
 # Logo de GoPass
 st.markdown("""
