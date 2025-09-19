@@ -1,116 +1,100 @@
-import streamlit as st 
+import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import re
+import plotly.express as px
 
 # -------------------------
 # Configuración página
 # -------------------------
 st.set_page_config(page_title="Validador de Dobles Cobros", page_icon="🚗", layout="wide")
-st.title("🚗 Validador de Dobles Cobros")
-st.markdown("---")
 
-# ===== CSS GLOBAL =====
+# ==== CSS minimalista y profesional (claro) ====
 st.markdown("""
 <style>
-/* ===== Fondo General ===== */
+/* App background and typography */
 .stApp {
-    background: linear-gradient(135deg, #0F2027, #203A43, #2C5364);
-    color: white !important;
-    font-family: 'Segoe UI', sans-serif;
+  background: #F7F9FB !important;
+  color: #0F1724 !important;
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
 }
 
-/* ===== Títulos ===== */
-h1, h2, h3, h4 {
-    color: #00F5D4 !important;
-    font-weight: bold !important;
-    text-shadow: 0px 0px 8px rgba(0, 245, 212, 0.5);
-}
+/* Page title */
+[data-testid="stHeader"] {display: none;} /* hide default header */
+h1, h2, h3 { color: #0F1724 !important; font-weight: 600; }
 
-/* ===== Separadores ===== */
-hr {
-    border: 1px solid #00CFFF !important;
-}
-
-/* ===== Sidebar ===== */
+/* Sidebar clean */
 [data-testid="stSidebar"] {
-    background-color: #1E1E2F !important;
-    padding: 20px 10px 20px 10px !important;
-    border-right: 1px solid #333 !important;
+  background: #FFFFFF !important;
+  border-right: 1px solid #E6EEF3 !important;
+  padding: 18px !important;
 }
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #0F1724 !important; }
 
-/* Texto en sidebar */
-[data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, 
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] label {
-    color: #E0E0E0 !important; 
-}
-
-/* Botón expandir sidebar */
-[data-testid="stSidebarNav"] button {
-    background: #2E2E3E !important;
-    color: white !important;
-    border-radius: 6px !important;
-}
-
-/* ===== DataFrames estilo glass ===== */
-[data-testid="stDataFrame"] {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-radius: 12px !important;
-    box-shadow: 0px 0px 12px rgba(0,0,0,0.4);
-}
-
-/* ===== Botones ===== */
+/* Buttons */
 .stButton button {
-    background: linear-gradient(90deg, #00CFFF, #00F5D4);
-    color: black !important;
-    font-weight: bold;
-    border-radius: 12px;
-    padding: 10px 20px;
-    border: none;
-    transition: 0.3s ease-in-out;
+  background: linear-gradient(180deg,#0B7285,#046C67) !important; /* teal accent */
+  color: #FFFFFF !important;
+  border-radius: 10px !important;
+  padding: 8px 14px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
 }
-.stButton button:hover {
-    background: linear-gradient(90deg, #00F5D4, #00CFFF);
-    transform: scale(1.05);
-    box-shadow: 0px 0px 10px rgba(0,245,212,0.6);
+.stButton button:hover { transform: translateY(-1px); }
+
+/* DataFrame / tables */
+[data-testid="stDataFrame"] {
+  background: #FFFFFF !important;
+  border: 1px solid #E6EEF3 !important;
+  border-radius: 8px !important;
+  padding: 6px !important;
 }
 
-/* ===== Scrollbar ===== */
-::-webkit-scrollbar {
-    width: 8px;
+/* Cards / metrics */
+.metric-card {
+  background: #FFFFFF;
+  border: 1px solid #E6EEF3;
+  border-radius: 12px;
+  padding: 14px;
 }
-::-webkit-scrollbar-track {
-    background: #1E1E2F;
+
+/* Make charts area stand out slightly */
+.chart-area {
+  background: transparent;
+  padding: 6px;
 }
-::-webkit-scrollbar-thumb {
-    background: #00CFFF;
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #00F5D4;
-}
+
+/* Small text styling */
+.small-muted { color: #7A8A93; font-size: 13px; }
+
+/* Tidy scrollbars */
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: #CBDDE3; border-radius: 10px; }
+
 </style>
 """, unsafe_allow_html=True)
 
-# Logo de GoPass
+# Title block (clean)
 st.markdown("""
-<div style="display: flex; justify-content: center; margin-bottom: 30px;">
-    <img src="https://i.imgur.com/z9xt46F.jpeg"
-         style="width: 40%; border-radius: 15px; box-shadow: 0px 0px 12px rgba(0,245,212,0.5);" 
-         alt="Logo Gopass">
+<div style='display:flex;align-items:center;gap:16px'>
+  <img src='https://i.imgur.com/z9xt46F.jpeg' style='height:54px;border-radius:8px;object-fit:cover;'>
+  <div>
+    <h2 style='margin:0'>Validador de Dobles Cobros</h2>
+    <div class='small-muted'>Interfaz profesional · Minimalista · Dashboard interactivo</div>
+  </div>
 </div>
+<hr style='margin-top:12px;'>
 """, unsafe_allow_html=True)
 
 # -------------------------
-# Helpers (no modifiqué lógica)
+# Helpers (misma lógica)
 # -------------------------
+
 def clean_colnames(df):
     df.columns = [str(c).strip() for c in df.columns]
     return df
+
 
 def normalize_datetime_vectorized(date_series):
     s = date_series.astype(str).str.strip().replace({'nan': None})
@@ -120,10 +104,12 @@ def normalize_datetime_vectorized(date_series):
     parsed = pd.to_datetime(s, dayfirst=True, errors='coerce')
     return parsed
 
+
 def make_validation_key(dt_entry, dt_exit):
     e = dt_entry.dt.strftime("%Y-%m-%d %H")
     x = dt_exit.dt.strftime("%Y-%m-%d %H")
     return e + "|" + x
+
 
 def plate_is_valid(plate):
     if pd.isna(plate):
@@ -132,8 +118,9 @@ def plate_is_valid(plate):
     return bool(re.match(r'^[A-Z]{3}\d{3}$', p))
 
 # -------------------------
-# Procesamiento (igual)
+# Procesamiento Base Comercio
 # -------------------------
+
 def process_comercio_base(df):
     df = clean_colnames(df)
     required_cols = ['Nº de tarjeta', 'Tarjeta', 'Movimiento', 'Fecha/Hora', 'Matrícula']
@@ -164,6 +151,10 @@ def process_comercio_base(df):
     comercio_keys['llave_validacion'] = make_validation_key(comercio_keys['Fecha_entrada'], comercio_keys['Fecha_salida'])
     return df_filtered, comercio_keys[['Nº de tarjeta','Fecha_entrada','Fecha_salida','llave_validacion']]
 
+# -------------------------
+# Procesamiento Base Gopass
+# -------------------------
+
 def process_gopass_base(df):
     df = clean_colnames(df)
     required_cols = ['Fecha de entrada', 'Fecha de salida', 'Transacción', 'Placa Vehiculo']
@@ -180,9 +171,11 @@ def process_gopass_base(df):
     df_valid = df.dropna(subset=['Fecha_entrada_norm_full','Fecha_salida_norm_full']).copy()
     return df_valid
 
-def find_possible_doubles(comercio_keys, gopass_df):
-    st.write("🔍 Buscando posibles dobles cobros (±5 min)...")
+# -------------------------
+# Detección de posibles y confirmados
+# -------------------------
 
+def find_possible_doubles(comercio_keys, gopass_df):
     merged = comercio_keys.merge(
         gopass_df[['Transacción','Fecha_entrada_norm_full','Fecha_salida_norm_full','llave_validacion','Placa_clean']],
         on='llave_validacion', how='inner', suffixes=('_comercio','_gopass')
@@ -195,6 +188,7 @@ def find_possible_doubles(comercio_keys, gopass_df):
 
     possibles = merged[(merged['dif_entrada'].between(-5,5)) & (merged['dif_salida'].between(-5,5))].copy()
     return possibles
+
 
 def find_confirmed_doubles(possible_df, comercio_df_original):
     if possible_df is None or possible_df.empty:
@@ -211,48 +205,94 @@ def find_confirmed_doubles(possible_df, comercio_df_original):
     merged['llave_confirmacion_gopass']   = merged['llave_validacion'] + "|" + merged['Placa_clean']
 
     confirmed = merged[merged['llave_confirmacion_comercio'] == merged['llave_confirmacion_gopass']].copy()
-    return confirmed[['Nº de tarjeta','Transacción','Matrícula_clean','Placa_clean','llave_validacion','llave_confirmacion_comercio','llave_confirmacion_gopass']]
+    # make sure timestamps are proper types for plotting
+    confirmed['Fecha_entrada'] = pd.to_datetime(confirmed['Fecha_entrada'])
+    confirmed['Fecha_salida']  = pd.to_datetime(confirmed['Fecha_salida'])
+
+    return confirmed[['Nº de tarjeta','Transacción','Matrícula_clean','Placa_clean','Fecha_entrada','Fecha_salida','llave_validacion']]
 
 # -------------------------
 # Interfaz
 # -------------------------
-st.sidebar.header("📁 Cargar Archivos")
 
-comercio_file = st.sidebar.file_uploader("Cargar archivo del Comercio (CSV o Excel)", type=['csv','xlsx','xls'])
-gopass_file   = st.sidebar.file_uploader("Cargar archivo de Gopass (Excel)", type=['xlsx','xls'])
+st.sidebar.header("Cargar archivos")
+comercio_file = st.sidebar.file_uploader("Comercio (CSV o Excel)", type=['csv','xlsx','xls'])
+gopass_file   = st.sidebar.file_uploader("Gopass (Excel)", type=['xlsx','xls'])
 
 if comercio_file and gopass_file:
     try:
-        with st.spinner("Cargando archivo Comercio..."):
+        with st.spinner("Cargando archivos..."):
             if comercio_file.name.lower().endswith('.csv'):
-                comercio_df = pd.read_csv(comercio_file, sep=';', encoding='utf-8', engine="python")
+                comercio_df = pd.read_csv(comercio_file, sep=';', encoding='utf-8', engine='python')
             else:
                 comercio_df = pd.read_excel(comercio_file)
-
-        with st.spinner("Cargando archivo Gopass..."):
             gopass_df = pd.read_excel(gopass_file)
 
-        st.success("✅ Archivos cargados correctamente")
+        st.success("Archivos cargados")
 
-        if st.button("🚀 Iniciar Validación de Dobles Cobros"):
+        if st.button("Iniciar Validación"):
             comercio_filtered, comercio_keys = process_comercio_base(comercio_df)
             gopass_processed = process_gopass_base(gopass_df)
 
             possible_doubles = find_possible_doubles(comercio_keys, gopass_processed)
-            if possible_doubles.empty:
-                st.success("✅ No se encontraron posibles dobles cobros.")
-            else:
-                st.subheader("⚠️ Posibles Dobles Cobros")
-                st.dataframe(possible_doubles, use_container_width=True)
+            confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
 
-                confirmed = find_confirmed_doubles(possible_doubles, comercio_df)
-                if confirmed.empty:
-                    st.info("ℹ️ No se encontraron dobles cobros confirmados.")
+            # SECTION: Resultados y dashboard
+            st.subheader("Resumen")
+            col1, col2, col3 = st.columns([1,1,2])
+
+            total_possibles = 0 if possible_doubles is None or possible_doubles.empty else len(possible_doubles)
+            total_confirmed = 0 if confirmed is None or confirmed.empty else len(confirmed)
+
+            with col1:
+                st.markdown("<div class='metric-card'><h3 style='margin:0'>{}</h3><div class='small-muted'>Posibles</div></div>".format(total_possibles), unsafe_allow_html=True)
+            with col2:
+                st.markdown("<div class='metric-card'><h3 style='margin:0'>{}</h3><div class='small-muted'>Confirmados</div></div>".format(total_confirmed), unsafe_allow_html=True)
+            with col3:
+                if total_confirmed > 0:
+                    first_date = confirmed['Fecha_entrada'].min().strftime('%Y-%m-%d')
+                    last_date = confirmed['Fecha_salida'].max().strftime('%Y-%m-%d')
+                    st.markdown(f"<div class='metric-card'><div class='small-muted'>Rango de fechas</div><strong>{first_date} → {last_date}</strong></div>", unsafe_allow_html=True)
                 else:
-                    st.subheader("🚨 Dobles Cobros Confirmados")
-                    st.dataframe(confirmed, use_container_width=True)
+                    st.markdown("<div class='metric-card'><div class='small-muted'>Rango de fechas</div><strong>—</strong></div>", unsafe_allow_html=True)
+
+            st.markdown("---")
+
+            if total_confirmed == 0:
+                st.info("No se encontraron dobles cobros confirmados.")
+            else:
+                # Interactive charts
+                st.subheader("Dashboard interactivo")
+                # Chart 1: Conteo por placa
+                counts = confirmed.groupby('Placa_clean').size().reset_index(name='count').sort_values('count', ascending=False)
+                fig_bar = px.bar(counts, x='Placa_clean', y='count', labels={'Placa_clean':'Placa','count':'Cantidad'},
+                                 title='Dobles cobros por placa', template='simple_white')
+                fig_bar.update_layout(margin=dict(l=10,r=10,t=40,b=10))
+
+                # Chart 2: Timeline (por entrada)
+                timeline = confirmed.copy()
+                timeline = timeline.sort_values('Fecha_entrada')
+                fig_time = px.scatter(timeline, x='Fecha_entrada', y='Placa_clean', hover_data=['Nº de tarjeta','Transacción'],
+                                      labels={'Fecha_entrada':'Fecha entrada','Placa_clean':'Placa'}, title='Timeline de transacciones (entrada)')
+                fig_time.update_layout(margin=dict(l=10,r=10,t=40,b=10))
+
+                # Chart 3: Tabla resumen (por matrícula si aplica)
+                with st.container():
+                    c1, c2 = st.columns([1,1])
+                    with c1:
+                        st.plotly_chart(fig_bar, use_container_width=True)
+                    with c2:
+                        st.plotly_chart(fig_time, use_container_width=True)
+
+                st.markdown("---")
+                st.subheader("Tabla de confirmados")
+                st.dataframe(confirmed.reset_index(drop=True), use_container_width=True)
+
+                # Download CSV
+                csv = confirmed.to_csv(index=False).encode('utf-8')
+                st.download_button("Descargar confirmados (CSV)", data=csv, file_name='dobles_confirmados.csv', mime='text/csv')
 
     except Exception as e:
-        st.error(f"❌ Error procesando archivos: {str(e)}")
+        st.error(f"Error procesando archivos: {str(e)}")
 else:
-    st.info("👆 Carga ambos archivos en la barra lateral para comenzar.")
+    st.info("Carga ambos archivos en la barra lateral para comenzar.")
