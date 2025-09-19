@@ -7,7 +7,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-
 # -------------------------
 # Configuración página
 # -------------------------
@@ -277,6 +276,93 @@ def find_confirmed_doubles(possible_df, comercio_df_original):
     return confirmed[['Nº de tarjeta','Transacción','Matrícula_clean','Placa_clean','llave_validacion','llave_confirmacion_comercio','llave_confirmacion_gopass']]
 
 # -------------------------
+# Visualización de datos cargados
+# -------------------------
+def show_data_preview(comercio_df, gopass_df):
+    st.markdown('<div class="section-header">📊 Vista Previa de Datos Cargados</div>', unsafe_allow_html=True)
+    
+    # Métricas básicas
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Registros Comercio", len(comercio_df))
+    with col2:
+        st.metric("Columnas Comercio", len(comercio_df.columns))
+    with col3:
+        st.metric("Registros GoPass", len(gopass_df))
+    with col4:
+        st.metric("Columnas GoPass", len(gopass_df.columns))
+    
+    # Pestañas para mostrar los datos
+    tab1, tab2 = st.tabs(["Datos Comercio", "Datos GoPass"])
+    
+    with tab1:
+        st.subheader("Base de Datos del Comercio")
+        st.dataframe(comercio_df.head(10), use_container_width=True)
+        
+        # Información de columnas
+        st.subheader("Información de Columnas - Comercio")
+        col_info = pd.DataFrame({
+            'Columna': comercio_df.columns,
+            'Tipo': comercio_df.dtypes.values,
+            'No Nulos': comercio_df.notnull().sum().values,
+            '% Nulos': (comercio_df.isnull().sum().values / len(comercio_df) * 100).round(2)
+        })
+        st.dataframe(col_info, use_container_width=True)
+    
+    with tab2:
+        st.subheader("Base de Datos de GoPass")
+        st.dataframe(gopass_df.head(10), use_container_width=True)
+        
+        # Información de columnas
+        st.subheader("Información de Columnas - GoPass")
+        col_info = pd.DataFrame({
+            'Columna': gopass_df.columns,
+            'Tipo': gopass_df.dtypes.values,
+            'No Nulos': gopass_df.notnull().sum().values,
+            '% Nulos': (gopass_df.isnull().sum().values / len(gopass_df) * 100).round(2)
+        })
+        st.dataframe(col_info, use_container_width=True)
+    
+    # Gráficos de distribución temporal
+    st.markdown("---")
+    st.subheader("Distribución Temporal de los Datos")
+    
+    # Intentar identificar columnas de fecha
+    comercio_date_cols = [col for col in comercio_df.columns if any(word in col.lower() for word in ['fecha', 'hora', 'date', 'time'])]
+    gopass_date_cols = [col for col in gopass_df.columns if any(word in col.lower() for word in ['fecha', 'hora', 'date', 'time'])]
+    
+    if comercio_date_cols and gopass_date_cols:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            try:
+                # Procesar primera columna de fecha del comercio
+                comercio_date_col = comercio_date_cols[0]
+                comercio_dates = pd.to_datetime(comercio_df[comercio_date_col], errors='coerce').dropna()
+                if not comercio_dates.empty:
+                    date_counts = comercio_dates.dt.date.value_counts().sort_index()
+                    fig = px.line(x=date_counts.index, y=date_counts.values, 
+                                 title=f"Distribución por Fecha - Comercio ({comercio_date_col})",
+                                 labels={'x': 'Fecha', 'y': 'Registros'})
+                    st.plotly_chart(fig, use_container_width=True)
+            except:
+                st.warning("No se pudo procesar la columna de fecha del comercio")
+        
+        with col2:
+            try:
+                # Procesar primera columna de fecha de GoPass
+                gopass_date_col = gopass_date_cols[0]
+                gopass_dates = pd.to_datetime(gopass_df[gopass_date_col], errors='coerce').dropna()
+                if not gopass_dates.empty:
+                    date_counts = gopass_dates.dt.date.value_counts().sort_index()
+                    fig = px.line(x=date_counts.index, y=date_counts.values, 
+                                 title=f"Distribución por Fecha - GoPass ({gopass_date_col})",
+                                 labels={'x': 'Fecha', 'y': 'Registros'})
+                    st.plotly_chart(fig, use_container_width=True)
+            except:
+                st.warning("No se pudo procesar la columna de fecha de GoPass")
+
+# -------------------------
 # Interfaz
 # -------------------------
 st.sidebar.header("📁 Cargar Archivo del Comercio")
@@ -299,8 +385,14 @@ if comercio_file and gopass_file:
             gopass_df = pd.read_excel(gopass_file)
 
         st.success("✅ Archivos cargados correctamente")
+        
+        # Mostrar vista previa de los datos
+        show_data_preview(comercio_df, gopass_df)
+        
+        st.markdown("---")
+        st.markdown('<div class="section-header">🚀 Validación de Dobles Cobros</div>', unsafe_allow_html=True)
 
-        if st.button("🚀 Iniciar Validación de Dobles Cobros", type="primary"):
+        if st.button("Iniciar Validación de Dobles Cobros", type="primary"):
             with st.spinner("Procesando datos..."):
                 comercio_filtered, comercio_keys = process_comercio_base(comercio_df)
                 gopass_processed = process_gopass_base(gopass_df)
