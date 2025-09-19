@@ -302,43 +302,6 @@ def show_data_preview(comercio_df, gopass_df):
     with tab2:
         st.subheader("Base de Datos de GoPass")
         st.dataframe(gopass_df.head(10), use_container_width=True)
-        
-      
-    
-    # Intentar identificar columnas de fecha
-    comercio_date_cols = [col for col in comercio_df.columns if any(word in col.lower() for word in ['fecha', 'hora', 'date', 'time'])]
-    gopass_date_cols = [col for col in gopass_df.columns if any(word in col.lower() for word in ['fecha', 'hora', 'date', 'time'])]
-    
-    if comercio_date_cols and gopass_date_cols:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            try:
-                # Procesar primera columna de fecha del comercio
-                comercio_date_col = comercio_date_cols[0]
-                comercio_dates = pd.to_datetime(comercio_df[comercio_date_col], errors='coerce').dropna()
-                if not comercio_dates.empty:
-                    date_counts = comercio_dates.dt.date.value_counts().sort_index()
-                    fig = px.line(x=date_counts.index, y=date_counts.values, 
-                                 title=f"Distribución por Fecha - Comercio ({comercio_date_col})",
-                                 labels={'x': 'Fecha', 'y': 'Registros'})
-                    st.plotly_chart(fig, use_container_width=True)
-            except:
-                st.warning("No se pudo procesar la columna de fecha del comercio")
-        
-        with col2:
-            try:
-                # Procesar primera columna de fecha de GoPass
-                gopass_date_col = gopass_date_cols[0]
-                gopass_dates = pd.to_datetime(gopass_df[gopass_date_col], errors='coerce').dropna()
-                if not gopass_dates.empty:
-                    date_counts = gopass_dates.dt.date.value_counts().sort_index()
-                    fig = px.line(x=date_counts.index, y=date_counts.values, 
-                                 title=f"Distribución por Fecha - GoPass ({gopass_date_col})",
-                                 labels={'x': 'Fecha', 'y': 'Registros'})
-                    st.plotly_chart(fig, use_container_width=True)
-            except:
-                st.warning("No se pudo procesar la columna de fecha de GoPass")
 
 # -------------------------
 # Interfaz
