@@ -49,9 +49,9 @@ st.markdown("""
 /* Mantener en negro el resto del uploader */
 [data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-title,
 [data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-subtitle,
-[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-list button,
+#[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-AddFiles-list button,
 [data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-Item-name,
-#[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-Item-status,
+[data-testid="stSidebar"] .stFileUploader .uppy-Dashboard-Item-status,
 [data-testid="stSidebar"] .stFileUploader span,
 [data-testid="stSidebar"] .stFileUploader div {
     color: black !important;
